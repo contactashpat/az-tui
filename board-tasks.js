@@ -31,7 +31,10 @@ function execSpawnAsync(command, args) {
 function parseJsonOrThrow(label, text) {
   const trimmed = (text || "").trim();
   if (!trimmed) {
-    throw new Error(`${label} returned no JSON. Is Azure DevOps CLI authenticated and defaults set?`);
+    throw new Error(
+      `${label} returned no JSON. Is Azure DevOps CLI authenticated and defaults set? ` +
+        `Try passing --org and --project flags or run "az devops configure --list".`,
+    );
   }
   try {
     return JSON.parse(trimmed);
@@ -45,9 +48,18 @@ const program = new Command();
 program
   .option("-n, --name <regex>", "Filter tasks by title (regex, case-insensitive)")
   .option("-s, --state <regex>", "Filter tasks by state (regex, case-insensitive)")
+  .option("-o, --org <url>", "Azure DevOps organization URL (overrides CLI default)")
+  .option("-p, --project <name>", "Azure DevOps project name (overrides CLI default)")
   .parse(process.argv);
 
 const options = program.opts();
+
+function withOrgProjectArgs(baseArgs = []) {
+  const extra = [...baseArgs];
+  if (options.org) extra.push("--organization", options.org);
+  if (options.project) extra.push("--project", options.project);
+  return extra;
+}
 
 const WIQL = `
 Select [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.IterationPath]
@@ -59,7 +71,10 @@ Order By [System.ChangedDate] DESC
 `;
 
 async function fetchTaskIds() {
-  const stdout = await execSpawnAsync("az", ["boards", "query", "--wiql", WIQL, "--output", "json"]);
+  const stdout = await execSpawnAsync(
+    "az",
+    withOrgProjectArgs(["boards", "query", "--wiql", WIQL, "--output", "json"]),
+  );
   const data = parseJsonOrThrow("boards query", stdout);
   return data.workItems?.map((w) => w.id) || [];
 }
@@ -67,17 +82,20 @@ async function fetchTaskIds() {
 async function fetchTaskDetails(ids) {
   return Promise.all(
     ids.map(async (id) => {
-      const stdout = await execSpawnAsync("az", [
-        "boards",
-        "work-item",
-        "show",
-        "--id",
-        String(id),
-        "--fields",
-        "System.Id,System.Title,System.State,System.AssignedTo,System.IterationPath",
-        "--output",
-        "json",
-      ]);
+      const stdout = await execSpawnAsync(
+        "az",
+        withOrgProjectArgs([
+          "boards",
+          "work-item",
+          "show",
+          "--id",
+          String(id),
+          "--fields",
+          "System.Id,System.Title,System.State,System.AssignedTo,System.IterationPath",
+          "--output",
+          "json",
+        ]),
+      );
       const item = parseJsonOrThrow(`work-item ${id}`, stdout);
       const fields = item.fields || {};
       return {

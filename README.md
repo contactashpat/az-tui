@@ -80,4 +80,7 @@ node board-tasks.js
 
 # Filter by title and state (regex, case-insensitive)
 node board-tasks.js --name "checkout" --state "Active"
+
+# Override org/project if defaults are not set
+node board-tasks.js --org https://dev.azure.com/your-org --project YourProject
 ```
