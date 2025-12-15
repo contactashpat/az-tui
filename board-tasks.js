@@ -28,6 +28,19 @@ function execSpawnAsync(command, args) {
   });
 }
 
+function parseJsonOrThrow(label, text) {
+  const trimmed = (text || "").trim();
+  if (!trimmed) {
+    throw new Error(`${label} returned no JSON. Is Azure DevOps CLI authenticated and defaults set?`);
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (err) {
+    const preview = trimmed.slice(0, 200);
+    throw new Error(`${label} JSON parse failed: ${err.message}. Output preview: ${preview}`);
+  }
+}
+
 const program = new Command();
 program
   .option("-n, --name <regex>", "Filter tasks by title (regex, case-insensitive)")
@@ -47,7 +60,7 @@ Order By [System.ChangedDate] DESC
 
 async function fetchTaskIds() {
   const stdout = await execSpawnAsync("az", ["boards", "query", "--wiql", WIQL, "--output", "json"]);
-  const data = JSON.parse(stdout);
+  const data = parseJsonOrThrow("boards query", stdout);
   return data.workItems?.map((w) => w.id) || [];
 }
 
@@ -65,7 +78,7 @@ async function fetchTaskDetails(ids) {
         "--output",
         "json",
       ]);
-      const item = JSON.parse(stdout);
+      const item = parseJsonOrThrow(`work-item ${id}`, stdout);
       const fields = item.fields || {};
       return {
         id: item.id,
