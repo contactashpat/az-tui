@@ -33,7 +33,8 @@ function parseJsonOrThrow(label, text) {
   if (!trimmed) {
     throw new Error(
       `${label} returned no JSON. Is Azure DevOps CLI authenticated and defaults set? ` +
-        `Try passing --org and --project flags or run "az devops configure --list".`,
+        `Try passing --org/--project flags, setting AZURE_DEVOPS_ORG/AZURE_DEVOPS_PROJECT env vars, ` +
+        `or run "az devops configure --list".`,
     );
   }
   try {
@@ -54,10 +55,17 @@ program
 
 const options = program.opts();
 
+function getOrgProject() {
+  const org = options.org || process.env.AZURE_DEVOPS_ORG;
+  const project = options.project || process.env.AZURE_DEVOPS_PROJECT;
+  return { org, project };
+}
+
 function withOrgProjectArgs(baseArgs = []) {
+  const { org, project } = getOrgProject();
   const extra = [...baseArgs];
-  if (options.org) extra.push("--organization", options.org);
-  if (options.project) extra.push("--project", options.project);
+  if (org) extra.push("--organization", org);
+  if (project) extra.push("--project", project);
   return extra;
 }
 
