@@ -23,12 +23,12 @@ function execSpawnAsync(command, args) {
           ),
         );
       }
-      resolve(stdout);
+      resolve({ stdout, stderr });
     });
   });
 }
 
-function parseJsonOrThrow(label, text) {
+function parseJsonOrThrow(label, text, stderr = "") {
   const trimmed = (text || "").trim();
   if (!trimmed) {
     throw new Error(
@@ -51,6 +51,7 @@ program
   .option("-s, --state <regex>", "Filter tasks by state (regex, case-insensitive)")
   .option("-o, --org <url>", "Azure DevOps organization URL (overrides CLI default)")
   .option("-p, --project <name>", "Azure DevOps project name (overrides CLI default)")
+  .option("-d, --debug", "Print Azure CLI stdout/stderr for troubleshooting", false)
   .parse(process.argv);
 
 const options = program.opts();
@@ -79,18 +80,22 @@ Order By [System.ChangedDate] DESC
 `;
 
 async function fetchTaskIds() {
-  const stdout = await execSpawnAsync(
+  const { stdout, stderr } = await execSpawnAsync(
     "az",
     withOrgProjectArgs(["boards", "query", "--wiql", WIQL, "--output", "json"]),
   );
-  const data = parseJsonOrThrow("boards query", stdout);
+  if (options.debug) {
+    console.error(chalk.gray("boards query stdout:"), stdout.trim());
+    if (stderr.trim()) console.error(chalk.gray("boards query stderr:"), stderr.trim());
+  }
+  const data = parseJsonOrThrow("boards query", stdout, stderr);
   return data.workItems?.map((w) => w.id) || [];
 }
 
 async function fetchTaskDetails(ids) {
   return Promise.all(
     ids.map(async (id) => {
-      const stdout = await execSpawnAsync(
+      const { stdout, stderr } = await execSpawnAsync(
         "az",
         withOrgProjectArgs([
           "boards",
@@ -104,7 +109,11 @@ async function fetchTaskDetails(ids) {
           "json",
         ]),
       );
-      const item = parseJsonOrThrow(`work-item ${id}`, stdout);
+      if (options.debug) {
+        console.error(chalk.gray(`work-item ${id} stdout:`), stdout.trim());
+        if (stderr.trim()) console.error(chalk.gray(`work-item ${id} stderr:`), stderr.trim());
+      }
+      const item = parseJsonOrThrow(`work-item ${id}`, stdout, stderr);
       const fields = item.fields || {};
       return {
         id: item.id,
