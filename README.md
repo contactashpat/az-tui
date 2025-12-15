@@ -2,6 +2,9 @@
 ## Azure DevOps PR Viewer — Setup & Usage
 
 Interactive terminal viewer for Azure DevOps pull requests powered by the Azure CLI. List, explore, filter, and open PRs without leaving the terminal.
+<img width="2209" height="699" alt="CleanShot 2025-12-15 at 23 38 56" src="https://github.com/user-attachments/assets/66b0ee4f-83fc-40f5-a598-24f75cf241f9" />
+
+
 
 ## Prerequisites
 - Node.js 14+ (or Bun)
