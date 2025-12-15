@@ -145,29 +145,40 @@ async function showPRDetails(pr) {
   if (openInBrowser) openBrowser(await constructPrUrl(pr));
 }
 
+function printMenu(condensed) {
+  const menuLines = [
+    "1) View PR Details",
+    `${condensed ? "2) Show More Fields" : "2) Show Less Fields"}`,
+    "3) Filter by Created By",
+    "4) Filter by Reviewer",
+    "5) Refresh PR List",
+    "h) Help (show options)",
+    "q) Exit",
+  ];
+  console.log(chalk.blue("\nOptions:"));
+  for (const line of menuLines) console.log(`  ${line}`);
+}
+
 async function mainMenu(prs) {
   let condensed = true;
   await showTable(prs, condensed);
+  printMenu(condensed);
 
   while (true) {
-    const choices = [
-      "1) View PR Details",
-      `${condensed ? "2) Show More Fields" : "2) Show Less Fields"}`,
-      "3) Filter by Created By",
-      "4) Filter by Reviewer",
-      "5) Refresh PR List",
-      "q) Exit",
-    ];
-
     const { action } = await inquirer.prompt({
-      type: "list",
+      type: "input",
       name: "action",
-      message: "Select an action",
-      choices,
-      pageSize: choices.length,
+      message: "Select an option (number, h for help, q to quit):",
     });
 
-    switch (action[0]) {
+    const normalized = action.trim().toLowerCase();
+
+    if (normalized === "h" || normalized === "help" || normalized === "?") {
+      printMenu(condensed);
+      continue;
+    }
+
+    switch (normalized) {
       case "1": {
         const { index } = await inquirer.prompt({
           type: "input",
@@ -187,6 +198,7 @@ async function mainMenu(prs) {
       case "2":
         condensed = !condensed;
         await showTable(prs, condensed);
+        printMenu(condensed);
         break;
       case "3": {
         const { pattern } = await inquirer.prompt({
@@ -198,6 +210,7 @@ async function mainMenu(prs) {
           new RegExp(pattern, "i").test(pr.createdBy?.displayName),
         );
         await showTable(prs, condensed);
+        printMenu(condensed);
         break;
       }
       case "4": {
@@ -212,18 +225,22 @@ async function mainMenu(prs) {
           ),
         );
         await showTable(prs, condensed);
+        printMenu(condensed);
         break;
       }
       case "5": {
         console.log(chalk.blue("\nRefreshing PR list…"));
         prs = await fetchPRs();
         await showTable(prs, condensed);
+        printMenu(condensed);
         break;
       }
       case "q":
-      case "Q":
         console.log(chalk.green("Goodbye!"));
         process.exit(0);
+      default:
+        console.log(chalk.red("Invalid option. Type 'h' for help."));
+        printMenu(condensed);
     }
   }
 }
