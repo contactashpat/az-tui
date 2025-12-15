@@ -67,3 +67,14 @@ alias az-pr='node /path/to/your/cloned/repo/pr-interactive.js'
 h) Help (list options)
 q) Exit
 ```
+
+## View Open Board Tasks
+Use `board-tasks.js` to list open Tasks from your Azure Boards project (uses the Azure DevOps CLI defaults for org/project).
+
+```bash
+# Show all open tasks
+node board-tasks.js
+
+# Filter by title and state (regex, case-insensitive)
+node board-tasks.js --name "checkout" --state "Active"
+```
