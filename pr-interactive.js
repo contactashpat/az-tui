@@ -82,11 +82,11 @@ async function showTable(prs, condensed = false) {
       chalk.blue("Index"),
       chalk.green("ID"),
       chalk.yellow("Title"),
+      chalk.white("Created By"),
       ...(condensed
         ? [chalk.cyan("Approval")]
         : [
             chalk.magenta("Branches"),
-            chalk.white("Created By"),
             chalk.cyan("Approval"),
           ]),
     ],
@@ -95,10 +95,12 @@ async function showTable(prs, condensed = false) {
   let index = 1;
   for (const pr of prs) {
     const approval = getApprovalStatus(pr);
+    const createdBy = pr.createdBy?.displayName || "-";
     const baseRow = [
       index,
       chalk.bold(pr.pullRequestId),
       pr.status === "active" ? chalk.green(pr.title) : chalk.yellow(pr.title),
+      createdBy,
     ];
 
     if (condensed) {
@@ -107,7 +109,6 @@ async function showTable(prs, condensed = false) {
       table.push([
         ...baseRow,
         `${pr.sourceRefName.replace("refs/heads/", "")} → ${pr.targetRefName.replace("refs/heads/", "")}`,
-        pr.createdBy?.displayName,
         approval,
       ]);
     }
