@@ -64,8 +64,7 @@ alias az-pr='node /path/to/your/cloned/repo/pr-interactive.js'
 3) Filter by Created By
 4) Filter by Reviewer
 5) Refresh PR List
-6) Exit
+q) Exit
 ```
-
 
 

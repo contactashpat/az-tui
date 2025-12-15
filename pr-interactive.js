@@ -149,7 +149,7 @@ async function mainMenu(prs) {
         "3) Filter by Created By",
         "4) Filter by Reviewer",
         "5) Refresh PR List",
-        "6) Exit",
+        "q) Exit",
       ],
     });
 
@@ -205,7 +205,8 @@ async function mainMenu(prs) {
         await showTable(prs);
         break;
       }
-      case "6":
+      case "q":
+      case "Q":
         console.log(chalk.green("Goodbye!"));
         process.exit(0);
     }
