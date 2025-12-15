@@ -51,6 +51,11 @@ program
   .option("-s, --state <regex>", "Filter tasks by state (regex, case-insensitive)")
   .option("-o, --org <url>", "Azure DevOps organization URL (overrides CLI default)")
   .option("-p, --project <name>", "Azure DevOps project name (overrides CLI default)")
+  .option(
+    "-c, --changed-since <days>",
+    "Only include tasks changed within the last N days (reduces large queries)",
+    "180",
+  )
   .option("-d, --debug", "Print Azure CLI stdout/stderr for troubleshooting", false)
   .parse(process.argv);
 
@@ -70,19 +75,23 @@ function withOrgProjectArgs(baseArgs = []) {
   return extra;
 }
 
-const WIQL = `
+function buildWiql() {
+  const days = Math.max(1, parseInt(options.changedSince || "180", 10) || 180);
+  return `
 Select [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.IterationPath]
 From WorkItems
 Where [System.TeamProject] = @project
   And [System.WorkItemType] = 'Task'
   And [System.State] NOT IN ('Closed', 'Done', 'Removed', 'Resolved', 'Completed')
+  And [System.ChangedDate] >= @Today-${days}
 Order By [System.ChangedDate] DESC
 `;
+}
 
 async function fetchTaskIds() {
   const { stdout, stderr } = await execSpawnAsync(
     "az",
-    withOrgProjectArgs(["boards", "query", "--wiql", WIQL, "--output", "json"]),
+    withOrgProjectArgs(["boards", "query", "--wiql", buildWiql(), "--output", "json"]),
   );
   if (options.debug) {
     console.error(chalk.gray("boards query stdout:"), stdout.trim());

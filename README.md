@@ -84,6 +84,9 @@ node board-tasks.js --name "checkout" --state "Active"
 # Override org/project if defaults are not set
 node board-tasks.js --org https://dev.azure.com/your-org --project YourProject
 
+# Reduce query size (default last 180 days)
+node board-tasks.js --changed-since 90
+
 # Or set environment variables for reuse
 export AZURE_DEVOPS_ORG=https://dev.azure.com/your-org
 export AZURE_DEVOPS_PROJECT=YourProject
