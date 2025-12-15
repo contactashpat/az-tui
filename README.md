@@ -60,11 +60,10 @@ alias az-pr='node /path/to/your/cloned/repo/pr-interactive.js'
 ## Interactive Menu
 ```
 1) View PR Details
-2) Show Less Fields (condensed)
+2) Toggle Field Density (defaults to condensed)
 3) Filter by Created By
 4) Filter by Reviewer
 5) Refresh PR List
 q) Exit
 ```
-
 

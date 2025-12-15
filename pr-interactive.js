@@ -138,19 +138,25 @@ async function showPRDetails(pr) {
 }
 
 async function mainMenu(prs) {
+  let condensed = true;
+  await showTable(prs, condensed);
+
   while (true) {
+    const choices = [
+      "1) View PR Details",
+      `${condensed ? "2) Show More Fields" : "2) Show Less Fields"}`,
+      "3) Filter by Created By",
+      "4) Filter by Reviewer",
+      "5) Refresh PR List",
+      "q) Exit",
+    ];
+
     const { action } = await inquirer.prompt({
       type: "list",
       name: "action",
       message: "Select an action",
-      choices: [
-        "1) View PR Details",
-        "2) Show Less Fields",
-        "3) Filter by Created By",
-        "4) Filter by Reviewer",
-        "5) Refresh PR List",
-        "q) Exit",
-      ],
+      choices,
+      pageSize: choices.length,
     });
 
     switch (action[0]) {
@@ -171,7 +177,8 @@ async function mainMenu(prs) {
         break;
       }
       case "2":
-        await showTable(prs, true);
+        condensed = !condensed;
+        await showTable(prs, condensed);
         break;
       case "3": {
         const { pattern } = await inquirer.prompt({
@@ -182,7 +189,7 @@ async function mainMenu(prs) {
         prs = prs.filter((pr) =>
           new RegExp(pattern, "i").test(pr.createdBy?.displayName),
         );
-        await prs;
+        await showTable(prs, condensed);
         break;
       }
       case "4": {
@@ -196,13 +203,13 @@ async function mainMenu(prs) {
             new RegExp(pattern, "i").test(r.displayName),
           ),
         );
-        await showTable(prs);
+        await showTable(prs, condensed);
         break;
       }
       case "5": {
         console.log(chalk.blue("\nRefreshing PR list…"));
         prs = await fetchPRs();
-        await showTable(prs);
+        await showTable(prs, condensed);
         break;
       }
       case "q":
@@ -215,7 +222,6 @@ async function mainMenu(prs) {
 (async () => {
   try {
     const prs = await fetchPRs();
-    await showTable(prs);
     await mainMenu(prs);
   } catch (err) {
     console.error(chalk.red("Error:"), err.message);
