@@ -68,6 +68,14 @@ async function constructPrUrl(pr) {
   return "";
 }
 
+function getApprovalStatus(pr) {
+  const votes =
+    pr.reviewers?.map((r) => r.vote).filter((v) => typeof v === "number") || [];
+  if (votes.some((v) => v < 0)) return chalk.red("Rejected");
+  if (votes.some((v) => v >= 5)) return chalk.green("Approved");
+  return chalk.yellow("Pending");
+}
+
 async function showTable(prs, condensed = false) {
   const table = new Table({
     head: [
@@ -75,18 +83,18 @@ async function showTable(prs, condensed = false) {
       chalk.green("ID"),
       chalk.yellow("Title"),
       ...(condensed
-        ? [chalk.cyan("URL")]
+        ? [chalk.cyan("Approval")]
         : [
             chalk.magenta("Branches"),
-            chalk.cyan("URL"),
             chalk.white("Created By"),
+            chalk.cyan("Approval"),
           ]),
     ],
   });
 
   let index = 1;
   for (const pr of prs) {
-    const url = await constructPrUrl(pr);
+    const approval = getApprovalStatus(pr);
     const baseRow = [
       index,
       chalk.bold(pr.pullRequestId),
@@ -94,13 +102,13 @@ async function showTable(prs, condensed = false) {
     ];
 
     if (condensed) {
-      table.push([...baseRow, chalk.underline(url)]);
+      table.push([...baseRow, approval]);
     } else {
       table.push([
         ...baseRow,
         `${pr.sourceRefName.replace("refs/heads/", "")} → ${pr.targetRefName.replace("refs/heads/", "")}`,
-        chalk.underline(url),
         pr.createdBy?.displayName,
+        approval,
       ]);
     }
     index++;
