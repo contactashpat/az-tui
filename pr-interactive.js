@@ -2,157 +2,15 @@
 
 import chalk from "chalk";
 import inquirer from "inquirer";
-import Table from "cli-table3";
-import { spawn } from "child_process";
-import openBrowser from "open";
 
-// Helper that runs a command with explicit args (no shell) and returns stdout.
-async function execSpawnAsync(command, args) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", (err) => reject(err));
-    child.on("close", (code) => {
-      if (code !== 0) {
-        return reject(new Error(`Command "${command} ${args.join(" ")}" exited with code ${code}: ${stderr.trim()}`));
-      }
-      resolve(stdout);
-    });
-  });
-}
+import { fetchPRs } from "./pr-service.js";
+import { showPRDetails, showTable } from "./pr-render.js";
 
-async function getAzDevOpsDefaults() {
-  const stdout = await execSpawnAsync("az", ["devops", "configure", "--list"]);
-  const lines = stdout.split("\n");
-  const orgLine = lines.find((l) => l.trim().startsWith("organization"));
-  const projectLine = lines.find((l) => l.trim().startsWith("project"));
-
-  const organization = orgLine?.split("=")[1]?.trim();
-  const project = projectLine?.split("=")[1]?.trim();
-  return { organization, project };
-}
-
-async function fetchPRs(status = "active") {
-  // Only allow known statuses to avoid injection via unexpected values.
-  const allowed = ["active", "completed", "abandoned"];
-  if (!allowed.includes(status)) {
-    throw new Error(`Invalid status "${status}". Allowed: ${allowed.join(", ")}`);
-  }
-  const stdout = await execSpawnAsync("az", [
-    "repos",
-    "pr",
-    "list",
-    "--status",
-    status,
-    "--output",
-    "json",
-  ]);
-  return JSON.parse(stdout);
-}
-
-async function constructPrUrl(pr) {
-  const { organization: org, project: proj } = await getAzDevOpsDefaults();
-  const repo = pr.repository?.name;
-  const id = pr.pullRequestId;
-  if (org && proj && repo && id) {
-    return `${org}/${proj}/_git/${repo}/pullrequest/${id}`;
-  }
-
-  return "";
-}
-
-function getApprovalStatus(pr) {
-  const votes =
-    pr.reviewers?.map((r) => r.vote).filter((v) => typeof v === "number") || [];
-  if (votes.some((v) => v < 0)) return chalk.red("Rejected");
-  if (votes.some((v) => v >= 5)) return chalk.green("Approved");
-  return chalk.yellow("Pending");
-}
-
-async function showTable(prs, condensed = false) {
-  const table = new Table({
-    head: [
-      chalk.blue("Index"),
-      chalk.green("ID"),
-      chalk.yellow("Title"),
-      chalk.white("Created By"),
-      ...(condensed
-        ? [chalk.cyan("Approval")]
-        : [
-            chalk.magenta("Branches"),
-            chalk.cyan("Approval"),
-          ]),
-    ],
-  });
-
-  let index = 1;
-  for (const pr of prs) {
-    const approval = getApprovalStatus(pr);
-    const createdBy = pr.createdBy?.displayName || "-";
-    const baseRow = [
-      index,
-      chalk.bold(pr.pullRequestId),
-      pr.status === "active" ? chalk.green(pr.title) : chalk.yellow(pr.title),
-      createdBy,
-    ];
-
-    if (condensed) {
-      table.push([...baseRow, approval]);
-    } else {
-      table.push([
-        ...baseRow,
-        `${pr.sourceRefName.replace("refs/heads/", "")} → ${pr.targetRefName.replace("refs/heads/", "")}`,
-        approval,
-      ]);
-    }
-    index++;
-  }
-
-  console.log(table.toString());
-}
-
-async function showPRDetails(pr) {
-  console.log(chalk.bold(`\nDetails for PR #${pr.pullRequestId}`));
-  console.log(chalk.green("Title:"), chalk.green(pr.title));
-  console.log(chalk.yellow("Created By:"), pr.createdBy?.displayName);
-  console.log(
-    chalk.magenta("Source Branch:"),
-    pr.sourceRefName.replace("refs/heads/", ""),
-  );
-  console.log(
-    chalk.magenta("Target Branch:"),
-    pr.targetRefName.replace("refs/heads/", ""),
-  );
-  console.log(
-    chalk.cyan("Description:\n"),
-    pr.description || "- no description -",
-  );
-  console.log(chalk.blue("Web URL:"), await constructPrUrl(pr));
-
-  // Optionally open in browser
-  const { openInBrowser } = await inquirer.prompt({
-    type: "confirm",
-    name: "openInBrowser",
-    message: "Open this PR in your browser?",
-    default: false,
-  });
-  if (openInBrowser) openBrowser(await constructPrUrl(pr));
-}
-
-function printMenu(condensed) {
+function printMenu() {
   const menuLines = [
     "1) View PR Details",
-    `${condensed ? "2) Show More Fields" : "2) Show Less Fields"}`,
-    "3) Filter by Created By",
-    "4) Filter by Reviewer",
-    "5) Refresh PR List",
+    "2) Filter by Created By",
+    "3) Refresh PR List",
     "h) Help (show options)",
     "q) Exit",
   ];
@@ -161,9 +19,8 @@ function printMenu(condensed) {
 }
 
 async function mainMenu(prs) {
-  let condensed = true;
-  await showTable(prs, condensed);
-  printMenu(condensed);
+  await showTable(prs);
+  console.log(chalk.blue("Press 'o' to view options, 'q' to quit."));
 
   while (true) {
     const { action } = await inquirer.prompt({
@@ -174,8 +31,13 @@ async function mainMenu(prs) {
 
     const normalized = action.trim().toLowerCase();
 
+    if (normalized === "o" || normalized === "options") {
+      printMenu();
+      continue;
+    }
+
     if (normalized === "h" || normalized === "help" || normalized === "?") {
-      printMenu(condensed);
+      printMenu();
       continue;
     }
 
@@ -196,12 +58,7 @@ async function mainMenu(prs) {
         await showPRDetails(prs[index - 1]);
         break;
       }
-      case "2":
-        condensed = !condensed;
-        await showTable(prs, condensed);
-        printMenu(condensed);
-        break;
-      case "3": {
+      case "2": {
         const { pattern } = await inquirer.prompt({
           type: "input",
           name: "pattern",
@@ -210,30 +67,13 @@ async function mainMenu(prs) {
         prs = prs.filter((pr) =>
           new RegExp(pattern, "i").test(pr.createdBy?.displayName),
         );
-        await showTable(prs, condensed);
-        printMenu(condensed);
+        await showTable(prs);
         break;
       }
-      case "4": {
-        const { pattern } = await inquirer.prompt({
-          type: "input",
-          name: "pattern",
-          message: "Enter regex to filter by Reviewer:",
-        });
-        prs = prs.filter((pr) =>
-          pr.reviewers?.some((r) =>
-            new RegExp(pattern, "i").test(r.displayName),
-          ),
-        );
-        await showTable(prs, condensed);
-        printMenu(condensed);
-        break;
-      }
-      case "5": {
+      case "3": {
         console.log(chalk.blue("\nRefreshing PR list…"));
         prs = await fetchPRs();
-        await showTable(prs, condensed);
-        printMenu(condensed);
+        await showTable(prs);
         break;
       }
       case "q":
@@ -241,10 +81,10 @@ async function mainMenu(prs) {
         process.exit(0);
       default:
         console.log(chalk.red("Invalid option. Type 'h' for help."));
-        printMenu(condensed);
     }
   }
 }
+
 (async () => {
   try {
     const prs = await fetchPRs();
