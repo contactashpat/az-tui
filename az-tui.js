@@ -35,8 +35,8 @@ async function mainMenu() {
         name: "choice",
         message: "Where do you want to go?",
         choices: [
-          { name: "Pull Requests", value: "prs" },
-          { name: "Board Tasks", value: "board" },
+          { name: "1) Pull Requests", value: "prs" },
+          { name: "2) Board Tasks", value: "board" },
           { name: "Exit", value: "exit" },
         ],
       },
@@ -51,7 +51,7 @@ async function mainMenu() {
       if (choice === "prs") {
         await runScript("pr-interactive.js");
       } else if (choice === "board") {
-        await runScript("board-tasks.js");
+        await runScript("board-tasks.js", ["--wiql-file", "query.wiql", "--interactive"]);
       }
     } catch (err) {
       console.error(chalk.red(err.message || err));
