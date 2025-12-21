@@ -121,4 +121,14 @@ node board-tasks.js --wiql-file /tmp/query.wiql --filter-field "System.AssignedT
 # Use --no-interactive to disable the prompt loop
 node board-tasks.js --wiql-file /tmp/query.wiql
 # You can type a column number (1 = first column) or pick from the list, then enter a regex (case-insensitive)
+
+## Unified Launcher (PRs or Board)
+Use `az-tui.js` to choose between PR viewer and Board tasks (returns to the menu after each):
+```bash
+node az-tui.js
+# or make it executable and add an alias
+chmod +x az-tui.js
+alias az-tui='node /path/to/az-tui.js'
+az-tui
+```
 ```
