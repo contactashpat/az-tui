@@ -29,28 +29,39 @@ async function runScript(scriptName, args = []) {
 
 async function mainMenu() {
   while (true) {
+    console.log(chalk.blue("\nWhere do you want to go?"));
+    console.log("  1) Pull Requests");
+    console.log("  2) Board Tasks");
+    console.log("  q) Exit");
+
     const { choice } = await inquirer.prompt([
       {
-        type: "list",
+        type: "input",
         name: "choice",
-        message: "Where do you want to go?",
-        choices: [
-          { name: "1) Pull Requests", value: "prs" },
-          { name: "2) Board Tasks", value: "board" },
-          { name: "Exit", value: "exit" },
-        ],
+        message: "Enter choice (1/2/q):",
       },
     ]);
 
-    if (choice === "exit") {
+    const normalized = choice.trim().toLowerCase();
+
+    if (normalized === "q" || normalized === "quit" || normalized === "exit") {
       console.log(chalk.green("Goodbye!"));
       return;
     }
 
+    let target = null;
+    if (["1", "p", "pr", "prs"].includes(normalized)) target = "prs";
+    else if (["2", "b", "board", "boards"].includes(normalized)) target = "board";
+
+    if (!target) {
+      console.log(chalk.yellow("Invalid choice. Please enter 1, 2, or q."));
+      continue;
+    }
+
     try {
-      if (choice === "prs") {
+      if (target === "prs") {
         await runScript("pr-interactive.js");
-      } else if (choice === "board") {
+      } else if (target === "board") {
         await runScript("board-tasks.js", ["--wiql-file", "query.wiql", "--interactive"]);
       }
     } catch (err) {
