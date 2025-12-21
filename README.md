@@ -123,7 +123,7 @@ node board-tasks.js --wiql-file /tmp/query.wiql
 # You can type a column number (1 = first column) or pick from the list, then enter a regex (case-insensitive)
 
 ## Unified Launcher (PRs or Board)
-Use `az-tui.js` to choose between PR viewer and Board tasks (returns to the menu after each):
+Use `az-tui.js` to choose between PR viewer and Board tasks (returns to the menu after each). Board option runs `--wiql-file query.wiql --interactive` by default:
 ```bash
 node az-tui.js
 # or make it executable and add an alias
