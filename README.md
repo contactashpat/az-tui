@@ -91,4 +91,34 @@ node board-tasks.js --changed-since 90
 export AZURE_DEVOPS_ORG=https://dev.azure.com/your-org
 export AZURE_DEVOPS_PROJECT=YourProject
 node board-tasks.js
+
+# Run a custom WIQL query (string or file) and control displayed fields
+node board-tasks.js --wiql "SELECT [System.Id],[System.WorkItemType],[System.Title],[System.AssignedTo],[System.State],[System.Tags] FROM workitems WHERE [System.TeamProject]='DevOps-SRE'"
+# or
+cat > /tmp/query.wiql <<'EOF'
+SELECT
+    [System.Id],
+    [System.WorkItemType],
+    [System.Title],
+    [System.AssignedTo],
+    [System.State],
+    [System.Tags]
+FROM workitems
+WHERE
+    [System.TeamProject] = 'DevOps-SRE'
+    AND [System.ChangedDate] > @startOfDay('-30d')
+    AND [System.WorkItemType] = 'Product Backlog Item'
+    AND [System.State] = 'In Progress'
+    AND [System.AssignedTo] = 'Patil, Ash (INFOSYS) <ash.pat@bp.com>'
+EOF
+node board-tasks.js --wiql-file /tmp/query.wiql --fields "System.Id,System.WorkItemType,System.Title,System.AssignedTo,System.State,System.Tags"
+
+# Filter by any field (regex, case-insensitive)
+# e.g., only items assigned to “Ash”
+node board-tasks.js --wiql-file /tmp/query.wiql --filter-field "System.AssignedTo" --filter-value "Ash"
+
+# Interactive filtering (default on): choose a column and enter a regex after the table renders
+# Use --no-interactive to disable the prompt loop
+node board-tasks.js --wiql-file /tmp/query.wiql
+# You can type a column number (1 = first column) or pick from the list, then enter a regex (case-insensitive)
 ```

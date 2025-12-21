@@ -1,0 +1,15 @@
+SELECT
+    [System.Id],
+    [System.WorkItemType],
+    [System.Title],
+    [System.AssignedTo],
+    [System.State],
+    [System.Tags]
+FROM workitems
+WHERE
+    [System.TeamProject] = 'DevOps-SRE'
+    AND [System.ChangedDate] > @startOfDay('-30d')
+    AND [System.WorkItemType] = 'Task'
+    AND [System.State] = 'In Progress'
+
+
